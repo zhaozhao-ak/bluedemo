@@ -8,12 +8,7 @@ import android.widget.Toast;
 
 /**
  * 主页
- * 
- * @Project App_Bluetooth
- * @Package com.android.bluetooth
- * @author chenlin
- * @version 1.0
- * @Date 2013年6月2日
+ *
  */
 @SuppressWarnings("deprecation")
 public class BluetoothActivity extends TabActivity {

@@ -8,13 +8,6 @@ import android.widget.TabHost;
 
 /**
  * 带有动画效果的TabHost
- * 
- * @Project App_Bluetooth
- * @Package com.android.bluetooth
- * @author chenlin
- * @version 1.0
- * @Date 2013年6月2日
- * @Note TODO
  */
 public class AnimationTabHost extends TabHost {
 
