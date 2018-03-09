@@ -34,10 +34,10 @@ public class BluetoothActivity extends TabActivity {
 		//初始化
 		mTabHost = (AnimationTabHost) getTabHost();
 		//添加tab
-		mTabHost.addTab(mTabHost.newTabSpec("Tab1").setIndicator("设备列表", getResources().getDrawable(android.R.drawable.ic_menu_add))
-				.setContent(new Intent(this, DeviceActivity.class)));
+//		mTabHost.addTab(mTabHost.newTabSpec("Tab1").setIndicator("设备列表", getResources().getDrawable(android.R.drawable.ic_menu_add))
+//				.setContent(new Intent(this, DeviceActivity.class)));
 		mTabHost.addTab(mTabHost.newTabSpec("Tab2").setIndicator("会话列表", getResources().getDrawable(android.R.drawable.ic_menu_add))
-				.setContent(new Intent(this, ChatActivity.class)));
+				.setContent(new Intent(this, BluetoothChatActivity.class)));
 		//添加监听
 		mTabHost.setOnTabChangedListener(new OnTabChangeListener() {
 			public void onTabChanged(String tabId) {

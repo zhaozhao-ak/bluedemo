@@ -31,7 +31,7 @@ import java.util.UUID;
  * 会话界面
  *
  */
-public class ChatActivity extends Activity implements OnItemClickListener, OnClickListener {
+public class BluetoothChatActivity extends Activity implements OnItemClickListener, OnClickListener {
 	private static final int STATUS_CONNECT = 0x11;
 
 	private ListView mListView;
@@ -87,7 +87,7 @@ public class ChatActivity extends Activity implements OnItemClickListener, OnCli
 					InputMethodManager manager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
 					manager.hideSoftInputFromWindow(mEtMsg.getWindowToken(), 0);
 				} else
-					Toast.makeText(ChatActivity.this, "发送内容不能为空！", Toast.LENGTH_SHORT).show();
+					Toast.makeText(BluetoothChatActivity.this, "发送内容不能为空！", Toast.LENGTH_SHORT).show();
 			}
 		});
 
@@ -102,7 +102,7 @@ public class ChatActivity extends Activity implements OnItemClickListener, OnCli
 				}
 				BluetoothActivity.isOpen = false;
 				BluetoothActivity.mType = BluetoothActivity.Type.NONE;
-				Toast.makeText(ChatActivity.this, "已断开连接！", Toast.LENGTH_SHORT).show();
+				Toast.makeText(BluetoothChatActivity.this, "已断开连接！", Toast.LENGTH_SHORT).show();
 			}
 		});
 	}
@@ -134,19 +134,19 @@ public class ChatActivity extends Activity implements OnItemClickListener, OnCli
 			String info = (String) msg.obj;
 			switch (msg.what) {
 			case STATUS_CONNECT:
-				Toast.makeText(ChatActivity.this, info, 0).show();
+				Toast.makeText(BluetoothChatActivity.this, info, 0).show();
 				break;
 			}
 			
-			if (msg.what == 1) {
-				mDatas.add(new DeviceBean(info, true));
-				mAdapter.notifyDataSetChanged();
-				mListView.setSelection(mDatas.size() - 1);
-			}else {
-				mDatas.add(new DeviceBean(info, false));
-				mAdapter.notifyDataSetChanged();
-				mListView.setSelection(mDatas.size() - 1);
-			}
+//			if (msg.what == 1) {
+//				mDatas.add(new DeviceBean(info, true));
+//				mAdapter.notifyDataSetChanged();
+//				mListView.setSelection(mDatas.size() - 1);
+//			}else {
+//				mDatas.add(new DeviceBean(info, false));
+//				mAdapter.notifyDataSetChanged();
+//				mListView.setSelection(mDatas.size() - 1);
+//			}
 		}
 
 	};
@@ -294,9 +294,9 @@ public class ChatActivity extends Activity implements OnItemClickListener, OnCli
 			OutputStream os = mSocket.getOutputStream();
 			os.write(msg.getBytes());
 
-			mDatas.add(new DeviceBean(msg, false));
-			mAdapter.notifyDataSetChanged();
-			mListView.setSelection(mDatas.size() - 1);
+//			mDatas.add(new DeviceBean(msg, false));
+//			mAdapter.notifyDataSetChanged();
+//			mListView.setSelection(mDatas.size() - 1);
 
 		} catch (IOException e) {
 			e.printStackTrace();

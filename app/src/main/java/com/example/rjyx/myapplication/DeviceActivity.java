@@ -43,11 +43,11 @@ public class DeviceActivity extends Activity {
 		registerBroadcast();
 		init();
 	}
-	
+
 	private void initDatas() {
-		mDatas = new ArrayList<DeviceBean>();
-		mAdapter = new ChatListAdapter(this, mDatas);
-		mBtAdapter = BluetoothAdapter.getDefaultAdapter();
+//		mDatas = new ArrayList<DeviceBean>();
+//		mAdapter = new ChatListAdapter(this, mDatas);
+//		mBtAdapter = BluetoothAdapter.getDefaultAdapter();
 	}
 
 	/**
@@ -59,12 +59,12 @@ public class DeviceActivity extends Activity {
 		Set<BluetoothDevice> deviceSet = mBtAdapter.getBondedDevices();
 		if (deviceSet.size() > 0) {
 			for (BluetoothDevice device : deviceSet) {
-				mDatas.add(new DeviceBean(device.getName() + "\n" + device.getAddress(), true));
+				mDatas.add(new DeviceBean(device.getName(),device.getAddress(), true));
 				mAdapter.notifyDataSetChanged();
 				mListView.setSelection(mDatas.size() - 1);
 			}
 		} else {
-			mDatas.add(new DeviceBean("没有配对的设备", true));
+			mDatas.add(new DeviceBean("没有配对的设备","null", true));
 			mAdapter.notifyDataSetChanged();
 			mListView.setSelection(mDatas.size() - 1);
 		}
@@ -90,25 +90,26 @@ public class DeviceActivity extends Activity {
 		mListView = (ListView) findViewById(R.id.list);
 		mListView.setAdapter(mAdapter);
 		mListView.setFastScrollEnabled(true);
-		
-		
+
+
 		mListView.setOnItemClickListener(mDeviceClickListener);
-		
+
 		mBtnSearch = (Button) findViewById(R.id.start_seach);
 		mBtnSearch.setOnClickListener(mSearchListener);
 
-		
-		mBtnService = (Button) findViewById(R.id.start_service);
-		mBtnService.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View arg0) {
-				BluetoothActivity.mType = BluetoothActivity.Type.SERVICE;
-				BluetoothActivity.mTabHost.setCurrentTab(1);
-			}
-		});
-		
+
+		//开启服务
+//		mBtnService = (Button) findViewById(R.id.start_service);
+//		mBtnService.setOnClickListener(new OnClickListener() {
+//			@Override
+//			public void onClick(View arg0) {
+//				BluetoothActivity.mType = BluetoothActivity.Type.SERVICE;
+//				BluetoothActivity.mTabHost.setCurrentTab(1);
+//			}
+//		});
+
 	}
-	
+
 
 	/**
 	 * 搜索监听
@@ -124,7 +125,7 @@ public class DeviceActivity extends Activity {
 				mAdapter.notifyDataSetChanged();
 
 				init();
-				
+
 				/* 开始搜索 */
 				mBtAdapter.startDiscovery();
 				mBtnSearch.setText("ֹͣ停止搜索");
@@ -139,13 +140,11 @@ public class DeviceActivity extends Activity {
 		public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
 			DeviceBean bean = mDatas.get(position);
-			String info = bean.message;
-			String address = info.substring(info.length() - 17);
-			BluetoothActivity.BlueToothAddress = address;
+			BluetoothActivity.BlueToothAddress = bean.Address;
 
 			AlertDialog.Builder stopDialog = new AlertDialog.Builder(DeviceActivity.this);
 			stopDialog.setTitle("连接");//标题
-			stopDialog.setMessage(bean.message);
+			stopDialog.setMessage(bean.Address);
 			stopDialog.setPositiveButton("连接", new DialogInterface.OnClickListener() {
 				public void onClick(DialogInterface dialog, int which) {
 					mBtAdapter.cancelDiscovery();
@@ -153,7 +152,7 @@ public class DeviceActivity extends Activity {
 
 					BluetoothActivity.mType = BluetoothActivity.Type.CILENT;
 					BluetoothActivity.mTabHost.setCurrentTab(1);
-					
+
 					dialog.cancel();
 				}
 			});
@@ -166,7 +165,7 @@ public class DeviceActivity extends Activity {
 			stopDialog.show();
 		}
 	};
-	
+
 	/**
 	 * 发现设备广播
 	 */
@@ -180,7 +179,7 @@ public class DeviceActivity extends Activity {
 				BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
 				// 如果绑定的状态不一样
 				if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
-					mDatas.add(new DeviceBean(device.getName() + "\n" + device.getAddress(), false));
+					mDatas.add(new DeviceBean(device.getName() ,device.getAddress(), false));
 					mAdapter.notifyDataSetChanged();
 					mListView.setSelection(mDatas.size() - 1);
 				}
@@ -188,7 +187,7 @@ public class DeviceActivity extends Activity {
 			} else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
 				setProgressBarIndeterminateVisibility(false);
 				if (mListView.getCount() == 0) {
-					mDatas.add(new DeviceBean("û没有发现蓝牙设备", false));
+					mDatas.add(new DeviceBean("没有配对的设备","null", false));
 					mAdapter.notifyDataSetChanged();
 					mListView.setSelection(mDatas.size() - 1);
 				}
@@ -196,10 +195,12 @@ public class DeviceActivity extends Activity {
 			}
 		}
 	};
-	
+
 	@Override
 	public void onStart() {
 		super.onStart();
+
+		//打开蓝牙
 		if (!mBtAdapter.isEnabled()) {
 			Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
 			startActivityForResult(enableIntent, 3);
@@ -209,9 +210,11 @@ public class DeviceActivity extends Activity {
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
+		//取消搜索
 		if (mBtAdapter != null) {
 			mBtAdapter.cancelDiscovery();
 		}
+		//注销广播
 		this.unregisterReceiver(mReceiver);
 	}
 }

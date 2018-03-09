@@ -47,11 +47,11 @@ public class DeviceListAdapter extends BaseAdapter {
 		}
 
 		if (item.isReceive) {
-			viewHolder.child.setBackgroundResource(R.drawable.msgbox_rec);
+			viewHolder.child.setBackgroundResource(R.drawable.item_receive_bg);
 		} else {
-			viewHolder.child.setBackgroundResource(R.drawable.msgbox_send);
+			viewHolder.child.setBackgroundResource(R.drawable.item_not_receive_bg);
 		}
-		viewHolder.msg.setText(item.message);
+		viewHolder.msg.setText(item.name + "\n" + item.Address);
 
 		return convertView;
 	}
