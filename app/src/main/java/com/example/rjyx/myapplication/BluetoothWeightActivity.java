@@ -1,5 +1,6 @@
 package com.example.rjyx.myapplication;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -10,9 +11,12 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
@@ -41,6 +45,7 @@ import static android.widget.Toast.LENGTH_SHORT;
 public class BluetoothWeightActivity  extends AppCompatActivity implements BluetoothItemOnclick {
 
     private String TAG = "BluetoothWeightActivity";
+    private Context mContext;
     private ListView mListView;
     private TextView tv_msg;
     private Button mBtnSend;// 发送按钮
@@ -77,10 +82,30 @@ public class BluetoothWeightActivity  extends AppCompatActivity implements Bluet
     private ReadThread mReadThread;
 
 
+    //权限类
+    private RuntimePermissionUtil permissionUtil;
+    private boolean hasPermission = true;
+    public static final int PERMISSIONS_GRANTED = 0; // 权限授权
+    public static final int PERMISSIONS_DENIED = 1; // 权限拒绝
+    private static final int PERMISSION_REQUEST_CODE = 0; // 系统权限管理页面的参数
+    private static final String PACKAGE_URL_SCHEME = "package:"; // 方案
+    // 申请权限
+    private static final String[] requestBasicPermissions = {
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.READ_CALENDAR,
+            Manifest.permission.BLUETOOTH,
+            Manifest.permission.BLUETOOTH_ADMIN,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+    };
+
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.devices);
+        mContext = this;
         initDatas();
         initViews();
         registerBroadcast();
@@ -89,12 +114,27 @@ public class BluetoothWeightActivity  extends AppCompatActivity implements Bluet
     }
 
     @Override
+    public void onStart() {
+        super.onStart();
+        //打开蓝牙
+        if (!mBtAdapter.isEnabled()) {
+            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableIntent, 3);
+        }
+
+
+    }
+
+    @Override
     public void onResume() {
         super.onResume();
 
         //开启蓝牙服务端
-        mServerThread = new ServerThread();
-        mServerThread.start();
+        if (mServerThread==null){
+            mServerThread = new ServerThread();
+            mServerThread.start();
+        }
+
     }
 
     /**
@@ -115,18 +155,26 @@ public class BluetoothWeightActivity  extends AppCompatActivity implements Bluet
                     break;
                 //蓝牙正常连接显示蓝牙地址
                 case 3:
-                    tv_connect_state.setText(BlueToothAddress);
+                    tv_connect_state.setText(info);
                     tv_communication_state.setText("正常");
+                    init();
                     break;
                     //接收到数据
                 case 8:
                     tv_msg.setText(info);
                     break;
 
+                case 9:
+                    tv_connect_state.setText("未连接..");
+                    tv_communication_state.setText("不正常..");
+                    Toast.makeText(BluetoothWeightActivity.this, "已断开连接！", LENGTH_SHORT).show();
+                    Disconnect();
+                    break;
+
                 //蓝牙连接异常
                 case 10:
                     tv_connect_state.setText("连接异常..");
-
+                    tv_communication_state.setText("不正常..");
                     break;
                 default:
                     break;
@@ -140,6 +188,18 @@ public class BluetoothWeightActivity  extends AppCompatActivity implements Bluet
         mAdapter = new ChatListAdapter(this, mDatas,this);
         mBtAdapter = BluetoothAdapter.getDefaultAdapter();
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
+        // 在线注册设备
+        permissionUtil = new RuntimePermissionUtil(this);
+        hasPermission = true;
+        if (permissionUtil.lacksPermissions(requestBasicPermissions)) {
+            if (hasPermission) {
+                requestPermissions(requestBasicPermissions); // 请求权限
+            } else {
+                hasPermission = true;
+            }
+
+        }
     }
 
     /**
@@ -148,6 +208,12 @@ public class BluetoothWeightActivity  extends AppCompatActivity implements Bluet
     private void init() {
         Log.i("tag", "mBtAdapter=="+ mBtAdapter);
         //根据适配器得到所有的设备信息
+
+        //开启蓝牙服务端
+        if (mServerThread==null){
+            mServerThread = new ServerThread();
+            mServerThread.start();
+        }
 
         if (mBtAdapter.isDiscovering()) {
             mBtAdapter.cancelDiscovery();
@@ -180,6 +246,29 @@ public class BluetoothWeightActivity  extends AppCompatActivity implements Bluet
         // 设备发现完成
         IntentFilter foundFilter = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
         this.registerReceiver(mReceiver, foundFilter);
+
+        //监听蓝牙开启状态
+        IntentFilter statusFilter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+        this.registerReceiver(mReceiver, statusFilter);
+
+
+        IntentFilter filter1, filter2, filter3, filter4,filter5,filter6;
+        filter1 = new IntentFilter("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED");
+        filter2 = new IntentFilter(android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED);
+        filter3 = new IntentFilter(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED);
+        filter4 = new IntentFilter(android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED);
+        filter5 = new IntentFilter("android.bluetooth.BluetoothAdapter.STATE_OFF");
+        filter6 =new IntentFilter("android.bluetooth.BluetoothAdapter.STATE_ON");
+        // BroadcastReceiver mReceiver;
+        this.registerReceiver(mReceiver, filter1);
+        this.registerReceiver(mReceiver, filter2);
+        this.registerReceiver(mReceiver, filter3);
+        this.registerReceiver(mReceiver, filter4);
+        this.registerReceiver(mReceiver, filter5);
+        this.registerReceiver(mReceiver, filter6);
+
+
+
     }
 
     /**
@@ -238,24 +327,46 @@ public class BluetoothWeightActivity  extends AppCompatActivity implements Bluet
         mBtnDisconn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
-                //取消配对的
-                removePairDevice();
-
-                //断开客户端连接
-                shutdownClient();
-
-                //断开服务端连接
-//                shutdownServer();
-
-                //重新扫描
-                init();
-                tv_connect_state.setText("");
-                tv_communication_state.setText("不正常");
-                Toast.makeText(BluetoothWeightActivity.this, "已断开连接！", LENGTH_SHORT).show();
+                Message msg = new Message();
+                msg.what = 9;
+                mHandler.sendMessage(msg);
             }
         });
     }
+
+
+    //断开连接
+    private void Disconnect(){
+        //取消配对的
+        removePairDevice();
+
+        //断开客户端连接
+        shutdownClient();
+        //断开服务端连接
+        shutdownServer();
+        //重新扫描
+        new Thread() {
+            @Override
+            public void run() {
+                super.run();
+                try {
+                    Thread.sleep(1500);//休眠3秒
+
+                    BluetoothWeightActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            init();
+                        }
+                    });
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }.start();
+    }
+
+
 
     // 发送数据
     private void sendMessageHandle(String msg) {
@@ -373,16 +484,16 @@ public class BluetoothWeightActivity  extends AppCompatActivity implements Bluet
                         UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
 
                 Message msg = new Message();
-                msg.obj = "蓝牙服务开启，正在等待客户端的连接...";
                 msg.what = 1;
                 mHandler.sendMessage(msg);
 
 				/* 接受客户端的连接请求 */
                 mSocket = mServerSocket.accept();
-                msg = new Message();
-                msg.obj = "客户端已经连接上！可以发送信息。";
-                msg.what = 3;
-                mHandler.sendMessage(msg);
+                System.out.println("zhao---------正在等待客户端的连接...--------");
+                Message msg1 = new Message();
+                msg1 = new Message();
+                msg1.what = 3;
+                mHandler.sendMessage(msg1);
                 // 启动接受数据
                 mReadThread = new ReadThread();
                 mReadThread.start();
@@ -394,18 +505,23 @@ public class BluetoothWeightActivity  extends AppCompatActivity implements Bluet
 
     // 客户端线程
     private class ClientThread extends Thread {
+        private DeviceBean bean;
+
+        public ClientThread(DeviceBean bean) {
+            this.bean = bean;
+        }
+
         public void run() {
             try {
                 mSocket = mDevice.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
                 Message msg = new Message();
-                msg.obj = "请稍候，正在连接服务器:" + BlueToothAddress;
                 msg.what = 2;
                 mHandler.sendMessage(msg);
 
                 mSocket.connect();
 
                 msg = new Message();
-                msg.obj = "已经连接上服务端！可以发送信息。";
+                msg.obj = bean.Address;
                 msg.what = 3;
                 mHandler.sendMessage(msg);
                 // 启动接受数据
@@ -413,7 +529,6 @@ public class BluetoothWeightActivity  extends AppCompatActivity implements Bluet
                 mReadThread.start();
             } catch (IOException e) {
                 Message msg = new Message();
-                msg.obj = "连接服务端异常！断开连接重新试一试。";
                 msg.what = 10;
                 mHandler.sendMessage(msg);
             }
@@ -455,10 +570,10 @@ public class BluetoothWeightActivity  extends AppCompatActivity implements Bluet
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-
+            int blueState = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, 0);
+            BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                 // 获得设备信息
-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 // 如果绑定的状态不一样
                 if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
                     mDatas.add(new DeviceBean(device.getName() ,device.getAddress(), false));
@@ -466,33 +581,52 @@ public class BluetoothWeightActivity  extends AppCompatActivity implements Bluet
                     mListView.setSelection(mDatas.size() - 1);
                 }
                 // 如果搜索完成了
-            } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
+            }
+            if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
                 setProgressBarIndeterminateVisibility(false);
-                if (mListView.getCount() == 0) {
-                    mDatas.add(new DeviceBean("没有配对的设备","null", false));
-                    mAdapter.notifyDataSetChanged();
-                    mListView.setSelection(mDatas.size() - 1);
-                }
                 mBtnSearch.setText("重新搜索");
+                //蓝牙开启
+            }
+            if (BluetoothAdapter.STATE_ON == blueState) {
+                //开始扫描
+                init();
+                mBtnSearch.setText("重新搜索");
+            }
+
+            if(BluetoothAdapter.STATE_OFF == blueState)
+            {
+                mBtAdapter.cancelDiscovery();
+                mBtnSearch.setText("重新搜索");
+                Message msg = new Message();
+                msg.what = 9;
+                mHandler.sendMessage(msg);
+            }
+
+            if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
+
+                System.out.println("zhao-----------acl-------------------------");
+                Message msg = new Message();
+                msg = new Message();
+                msg.obj = device.getAddress();
+                msg.what = 3;
+                mHandler.sendMessage(msg);
+            }
+
+            //蓝牙连接已断开
+            if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) {
+                Message msg = new Message();
+                msg.what = 9;
+                mHandler.sendMessage(msg);
             }
         }
     };
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        //打开蓝牙
-        if (!mBtAdapter.isEnabled()) {
-            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableIntent, 3);
-        }
-    }
+
 
     @Override
     public void OnclickConnection(DeviceBean item) {
 
         final DeviceBean bean = item;
-        BlueToothAddress = bean.Address;
         AlertDialog.Builder stopDialog = new AlertDialog.Builder(BluetoothWeightActivity.this);
         stopDialog.setTitle("连接");//标题
         stopDialog.setMessage(bean.Address);
@@ -504,7 +638,7 @@ public class BluetoothWeightActivity  extends AppCompatActivity implements Bluet
                 //开启蓝牙客户端
                 if (!"".equals(bean.Address)) {
                     mDevice = mBluetoothAdapter.getRemoteDevice(bean.Address);
-                    mClientThread = new ClientThread();
+                    mClientThread = new ClientThread(bean);
                     mClientThread.start();
                 }
                 dialog.cancel();
@@ -512,7 +646,6 @@ public class BluetoothWeightActivity  extends AppCompatActivity implements Bluet
         });
         stopDialog.setNegativeButton("取消", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int which) {
-                BluetoothActivity.BlueToothAddress = null;
                 dialog.cancel();
             }
         });
@@ -559,17 +692,48 @@ public class BluetoothWeightActivity  extends AppCompatActivity implements Bluet
         //注销广播
         this.unregisterReceiver(mReceiver);
 
-        if (BluetoothActivity.mType == BluetoothActivity.Type.CILENT) {
-            shutdownClient();
-        } else if (BluetoothActivity.mType == BluetoothActivity.Type.SERVICE) {
-            shutdownServer();
-        }
-        BluetoothActivity.isOpen = false;
-        BluetoothActivity.mType = BluetoothActivity.Type.NONE;
-
-
         //停止服务
         shutdownClient();
         shutdownServer();
+    }
+
+
+    /**
+     * 用户权限处理,
+     * 如果全部获取, 则直接过.
+     * 如果权限缺失, 则提示Dialog.
+     *
+     * @param requestCode  请求码
+     * @param permissions  权限
+     * @param grantResults 结果
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (requestCode == PERMISSION_REQUEST_CODE && hasAllPermissionsGranted(grantResults)) {
+            hasPermission = true;
+            allPermissionsGranted();
+        } else {
+            hasPermission = false;
+        }
+    }
+
+    // 含有全部的权限
+    private boolean hasAllPermissionsGranted(@NonNull int[] grantResults) {
+        for (int grantResult : grantResults) {
+            if (grantResult == PackageManager.PERMISSION_DENIED) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // 全部权限均已获取
+    private void allPermissionsGranted() {
+        setResult(PERMISSIONS_GRANTED);
+    }
+
+    // 请求权限兼容低版本
+    private void requestPermissions(String... permissions) {
+        ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE);
     }
 }
